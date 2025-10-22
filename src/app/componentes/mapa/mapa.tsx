@@ -1,5 +1,3 @@
-// components/mapa/mapa.tsx
-
 "use client";
 
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -11,6 +9,7 @@ import UbicacionIcon from "./UbicacionIcon";
 import MarkerClusterGroup from "./MarkerClusterGroup";
 import { Fixer } from "./FixerPopup";
 import { Ubicacion } from "../../types";
+import React from "react";
 
 interface IconDefaultWithPrivate extends L.Icon.Default {
   _getIconUrl?: () => void;
@@ -29,6 +28,17 @@ const blueMarkerIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
+const redMarkerIcon = new L.Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+  shadowUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -38,12 +48,15 @@ L.Icon.Default.mergeOptions({
 });
 
 interface MapaProps {
+  isLoggedIn: boolean;
   ubicaciones: Ubicacion[];
   fixers: Fixer[];
   ubicacionSeleccionada: Ubicacion | null;
   onUbicacionClick?: (ubicacion: Ubicacion) => void;
+  onMarcadorAgregado?: (lat: number, lng: number) => void;
 }
 
+// ✅ Componente para actualizar la vista según ubicación seleccionada
 function ActualizarVista({ ubicacion }: { ubicacion: Ubicacion | null }) {
   const map = useMap();
   useEffect(() => {
@@ -52,13 +65,61 @@ function ActualizarVista({ ubicacion }: { ubicacion: Ubicacion | null }) {
   return null;
 }
 
+// ✅ NUEVO componente para manejar presión prolongada en el mapa (PC y móvil) - VERSIÓN COMPATIBLE
+function LongPressHandler({ onLongPress }: { onLongPress: (lat: number, lng: number) => void }) {
+  const map = useMap();
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleContextMenu = (e: L.LeafletEvent) => {
+      const leafletEvent = e as L.LeafletMouseEvent;
+      onLongPress(leafletEvent.latlng.lat, leafletEvent.latlng.lng);
+      map.flyTo([leafletEvent.latlng.lat, leafletEvent.latlng.lng], 16, { duration: 1 });
+    };
+
+    const handleMouseDown = (e: L.LeafletEvent) => {
+      const leafletEvent = e as L.LeafletMouseEvent;
+      timeoutRef.current = setTimeout(() => {
+        onLongPress(leafletEvent.latlng.lat, leafletEvent.latlng.lng);
+        map.flyTo([leafletEvent.latlng.lat, leafletEvent.latlng.lng], 16, { duration: 1 });
+      }, 800);
+    };
+
+    const handleMouseUp = () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+
+    map.on('contextmenu', handleContextMenu);
+    map.on('mousedown', handleMouseDown);
+    map.on('mouseup', handleMouseUp);
+    map.on('mouseout', handleMouseUp);
+
+    return () => {
+      map.off('contextmenu', handleContextMenu);
+      map.off('mousedown', handleMouseDown);
+      map.off('mouseup', handleMouseUp);
+      map.off('mouseout', handleMouseUp);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [map, onLongPress]);
+
+  return null;
+}
+
+// ✅ Componente principal del mapa
 export default function Mapa({
+  isLoggedIn,
   ubicaciones,
   fixers = [],
   ubicacionSeleccionada,
   onUbicacionClick,
+  onMarcadorAgregado,
 }: MapaProps) {
   const centroInicial: [number, number] = [-17.3895, -66.1568];
+  const [marcadorPersonalizado, setMarcadorPersonalizado] = React.useState<[number, number] | null>(null);
 
   const crearIconoFixer = (onClick?: () => void) =>
     L.divIcon({
@@ -130,7 +191,7 @@ export default function Mapa({
         <div style="margin-bottom:8px;">${especialidades}</div>
 
         ${
-          f.whatsapp
+          f.whatsapp && isLoggedIn
             ? `<a href="https://wa.me/${f.whatsapp.replace(
                 /\D/g,
                 ""
@@ -144,6 +205,13 @@ export default function Mapa({
                 text-decoration:none;padding:8px 0;font-size:13px;margin-top:8px;">
                 Contactar por WhatsApp
               </a>`
+            : f.whatsapp
+            ? `<button onclick="window.location.href='/404'" 
+                style="display:flex;align-items:center;justify-content:center;gap:6px;
+                background:#25D366;color:white;font-weight:500;border-radius:6px;
+                text-decoration:none;padding:8px 0;font-size:13px;margin-top:8px;border:none;cursor:pointer;width:100%">
+                Contactar por WhatsApp
+              </button>`
             : ""
         }
       </div>
@@ -156,6 +224,14 @@ export default function Mapa({
       icon: crearIconoFixer(),
     };
   });
+
+  // ✅ Maneja la presión prolongada
+  const handleLongPress = (lat: number, lng: number) => {
+    setMarcadorPersonalizado([lat, lng]);
+    if (onMarcadorAgregado) {
+      onMarcadorAgregado(lat, lng);
+    }
+  };
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4">
@@ -182,12 +258,19 @@ export default function Mapa({
             </Marker>
           )}
 
+          {marcadorPersonalizado && (
+            <Marker position={marcadorPersonalizado} icon={redMarkerIcon}>
+              <Popup>📍 Ubicación seleccionada</Popup>
+            </Marker>
+          )}
+
           <MarkerClusterGroup markers={fixerMarkers} color="#1366fd" />
           <ActualizarVista ubicacion={ubicacionSeleccionada} />
+          <LongPressHandler onLongPress={handleLongPress} />
         </MapContainer>
 
-        {/* ✅ Contador ENCIMA del mapa - Solo en PC/Tablet */}
-        <div className="absolute top-2 right-2 hidden sm:block z-[1000]">
+        {/* ✅ Contador SOBRE el mapa - Solo en PC/Tablet - Z-INDEX CORREGIDO */}
+        <div className="absolute top-3 right-3 hidden sm:block z-[5]"> {/* z-[5] más bajo que header */}
           {fixers.length > 0 ? (
             <div
               style={{
@@ -198,6 +281,7 @@ export default function Mapa({
                 boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                 fontSize: "14px",
                 whiteSpace: "nowrap",
+                border: "1px solid #bae6fd",
               }}
             >
               <strong style={{ fontWeight: "bold" }}>{fixers.length}</strong>{" "}
@@ -213,6 +297,7 @@ export default function Mapa({
                 boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                 fontSize: "14px",
                 whiteSpace: "nowrap",
+                border: "1px solid #fed7aa",
               }}
             >
               ¡No hay fixers cerca!
