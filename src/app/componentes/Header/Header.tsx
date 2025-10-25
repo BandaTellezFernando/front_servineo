@@ -16,6 +16,12 @@ export default function Header() {
   useEffect(() => {
     setIsClient(true);
 
+    // 🔹 Mantener sesión solo durante la pestaña abierta
+    const storedLogin = sessionStorage.getItem('isLoggedIn');
+    if (storedLogin === 'true') {
+      setIsLoggedIn(true);
+    }
+
     const handleScroll = () => {
       if (window.innerWidth < 640) {
         setAreButtonsVisible(window.scrollY <= lastScrollY.current || window.scrollY === 0);
@@ -27,7 +33,7 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 🔹 Manejo de búsqueda: al presionar Enter → Error 404
+  // 🔹 Redirigir búsqueda a /404 al presionar Enter
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -35,28 +41,30 @@ export default function Header() {
     }
   };
 
-  // 🔹 Simulación de iniciar sesión + pedir ubicación + notificar login
+  // 🔹 Iniciar sesión (solo en sessionStorage) y pedir geolocalización
   const handleLogin = () => {
     setIsLoggedIn(true);
+    sessionStorage.setItem('isLoggedIn', 'true');
 
-    // ✅ Emitir evento para geolocalización
-    const eventGeo = new CustomEvent("solicitar-geolocalizacion");
-    window.dispatchEvent(eventGeo);
-    
-    // ✅ NUEVO: Emitir evento para notificar login exitoso al MapaWrapper
-    const eventLogin = new CustomEvent("login-exitoso");
-    window.dispatchEvent(eventLogin);
+    // Emitir evento para geolocalización
+    window.dispatchEvent(new CustomEvent("solicitar-geolocalizacion"));
+
+    // Emitir evento para notificar login exitoso
+    window.dispatchEvent(new CustomEvent("login-exitoso"));
+  };
+
+  // 🔹 Cerrar sesión
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    sessionStorage.removeItem('isLoggedIn');
   };
 
   if (!isClient) return null;
 
   return (
     <>
-      {/* ========================= */}
       {/* HEADER DESKTOP / TABLET */}
-      {/* ========================= */}
       <header className="hidden sm:flex items-center justify-between p-4 bg-[#EEF7FF] shadow-md fixed top-0 left-0 w-full z-10">
-        {/* 🔹 LOGO */}
         <div className="flex items-center">
           <Link href="/">
             <Icono size={40} />
@@ -64,8 +72,7 @@ export default function Header() {
           <span className="ml-2 text-xl font-bold text-[#11255A]">Servineo</span>
         </div>
 
-        {/* 🔹 BARRA DE BÚSQUEDA */}
-        <div className="grow mx-8">
+        <div className="flex-grow mx-8">
           <div className="relative">
             <input
               type="text"
@@ -90,23 +97,20 @@ export default function Header() {
           </div>
         </div>
 
-        {/* 🔹 ELEMENTOS DEL HEADER (CAMBIAN SI SE INICIA SESIÓN) */}
         <div className="flex items-center space-x-4">
           {!isLoggedIn ? (
             <>
               <Link href="/ser-fixer">
-                <button className="px-4 py-2 font-semibold text-[#ffffff] bg-[#2a87ff] rounded-md hover:bg-[#1a347a]">
+                <button className="px-4 py-2 font-semibold text-white bg-[#2a87ff] rounded-md hover:bg-[#1a347a]">
                   Ser Fixer
                 </button>
               </Link>
-
               <button
                 onClick={handleLogin}
                 className="px-4 py-2 font-semibold text-[#2a87ff] border border-[#2a87ff] rounded-md hover:bg-[#EEF7FF]"
               >
                 Iniciar Sesión
               </button>
-
               <Link href="/register">
                 <button className="px-4 py-2 font-semibold text-white bg-[#2a87ff] rounded-md hover:bg-[#52ABFF]">
                   Registrarse
@@ -116,12 +120,16 @@ export default function Header() {
           ) : (
             <>
               <Link href="/ser-fixer">
-                <button className="px-4 py-2 font-semibold text-[#ffffff] bg-[#2a87ff] rounded-md hover:bg-[#1a347a]">
+                <button className="px-4 py-2 font-semibold text-white bg-[#2a87ff] rounded-md hover:bg-[#1a347a]">
                   Ser Fixer
                 </button>
               </Link>
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold text-[#11255A]">Nombre de Usuario</span>
+              <div
+                onClick={() => router.push('/404')}
+                className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition"
+                title="Ver perfil"
+              >
+                <span className="font-semibold text-[#11255A] select-none">Nombre de Usuario</span>
                 <svg
                   className="w-8 h-8 text-[#2a87ff]"
                   fill="currentColor"
@@ -135,9 +143,7 @@ export default function Header() {
         </div>
       </header>
 
-      {/* ========================= */}
-      {/* HEADER MÓVIL SUPERIOR */}
-      {/* ========================= */}
+      {/* HEADER MÓVIL */}
       <header className="sm:hidden fixed top-0 left-0 w-full p-2 bg-[#EEF7FF] shadow-md z-10">
         <div className="flex items-center space-x-2 w-full">
           <Link href="/">
@@ -168,9 +174,7 @@ export default function Header() {
         </div>
       </header>
 
-      {/* ========================= */}
-      {/* FOOTER MÓVIL INFERIOR */}
-      {/* ========================= */}
+      {/* FOOTER MÓVIL */}
       <footer
         className={`sm:hidden fixed bottom-0 left-0 w-full px-3 py-2 bg-[#EEF7FF] shadow-md z-20 
         transform transition-transform duration-300 ease-in-out
