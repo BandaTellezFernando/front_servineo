@@ -118,7 +118,7 @@ export default function Mapa({
   onUbicacionClick,
   onMarcadorAgregado,
 }: MapaProps) {
-  const centroInicial: [number, number] = [-17.3895, -66.1568];
+  const centroInicial: [number, number] = [-17.3937, -66.1569];
   const [marcadorPersonalizado, setMarcadorPersonalizado] = React.useState<[number, number] | null>(null);
   const [mostrarUbicacionesPredefinidas, setMostrarUbicacionesPredefinidas] = React.useState(true);
 
