@@ -1,22 +1,30 @@
 @import "tailwindcss";
-@import 'leaflet/dist/leaflet.css';
+/* ✅ CORRECCIÓN: Eliminar import de Leaflet CSS aquí, se maneja en layout.tsx */
 
-:root {
+/*:root {
   --background: #ffffff;
   --foreground: #171717;
+}*/
+
+/* ✅ CORRECCIÓN: Eliminar @theme que no es compatible */
+/* Usar las variables de CSS directamente */
+:root {
+  --color-background: #ffffff;
+  --color-foreground: #171717;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
-
-@media (prefers-color-scheme: dark) {
+/*@media (prefers-color-scheme: dark) {
   :root {
     --background: #ffffff;
     --foreground: #000000;
   }
-}
+}*/
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-background);
+  color: var(--color-foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
