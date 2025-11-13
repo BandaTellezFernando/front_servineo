@@ -25,7 +25,7 @@ export const useGoogleAuth = () => {
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
       
       // ✅ CORRECCIÓN: Usar exactamente la misma URI que está en el backend
-      const redirectUri = 'http://localhost:3000/auth/google/callback';
+      const redirectUri = 'https://front-servineo-1wz6.vercel.app//auth/google/callback';
       
       console.log('🔐 Configuración OAuth:', { 
         clientId: clientId ? '✅ Configurado' : '❌ Faltante',
