@@ -1,6 +1,6 @@
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/ofertas";
+  process.env.NEXT_PUBLIC_API_URL || "https://alquiler-back-soft-war2-qizb.vercel.app/api/ofertas";
 
 export async function crearOferta(formData: FormData) {
   const res = await fetch(BASE_URL, {

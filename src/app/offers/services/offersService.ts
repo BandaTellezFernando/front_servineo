@@ -23,7 +23,7 @@ export interface ListOffersParams {
 }
 export interface ListOffersResult { total: number; items: Offer[]; }
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000').replace(/\/$/, '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'https://alquiler-back-soft-war2-qizb.vercel.app').replace(/\/$/, '');
 
 function qs(params: Record<string, any>) {
   const url = new URLSearchParams();

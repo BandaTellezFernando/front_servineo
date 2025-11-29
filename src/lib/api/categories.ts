@@ -8,7 +8,7 @@ export type CategoryDTO = {
   createdAt: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:4000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "https://alquiler-back-soft-war2-qizb.vercel.app";
 
 export async function getCategories(): Promise<CategoryDTO[]> {
   try {

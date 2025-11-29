@@ -1,6 +1,6 @@
 // src/lib/api/client.ts
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:4000";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "https://alquiler-back-soft-war2-qizb.vercel.app";
 
 export function apiUrl(path: string) {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
