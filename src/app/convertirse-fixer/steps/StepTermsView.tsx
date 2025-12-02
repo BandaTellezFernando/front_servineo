@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -28,7 +27,6 @@ export default function StepTermsView({ fixerId, summary, onBack, onFinish }: St
       setError(null);
       await acceptTerms(fixerId);
       onFinish();
-      
     } catch (err: any) {
       setError(String(err?.message || "No se pudo registrar la aceptación"));
     } finally {

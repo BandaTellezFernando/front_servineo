@@ -10,25 +10,12 @@ import { OfferDetailModal } from './OfferDetailModal';
 import { useModal } from '../hooks/useModal';
 import 'leaflet/dist/leaflet.css';
 
-// --- SOLUCIÓN 1: Tipado seguro para el Hack de Leaflet ---
-// Definimos un tipo que extienda el default e incluya la propiedad privada opcional
-type LeafletIconFix = L.Icon.Default & { _getIconUrl?: string };
-
-// Ahora hacemos el cast a este tipo específico en lugar de 'any'
-delete (L.Icon.Default.prototype as LeafletIconFix)._getIconUrl;
-
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
-
-// --- SOLUCIÓN 2: Interfaz para las ofertas agrupadas ---
-// Extendemos la oferta original y añadimos las propiedades nuevas que creas en el reduce
-interface GroupedOffer extends Offer {
-  categories: string[];
-  allOffers: Offer[];
-}
 
 interface MapComponentProps {
   userLocation: Location;
@@ -56,7 +43,7 @@ const MapController: React.FC<{
       animate: true,
       duration: 1
     });
-  }, [trigger]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trigger]);
 
   useEffect(() => {
     const handleZoomEnd = () => {
@@ -81,6 +68,7 @@ const createCategoryIcon = (category: string): L.DivIcon => {
     className: 'custom-marker',
     html: `
       <div style="position: relative; width: 32px; height: 40px;">
+        <!-- Pin/Marcador -->
         <div style="
           position: absolute;
           bottom: 0;
@@ -94,6 +82,7 @@ const createCategoryIcon = (category: string): L.DivIcon => {
           filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
         "></div>
         
+        <!-- Círculo superior -->
         <div style="
           position: absolute;
           top: 0;
@@ -129,7 +118,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   const [mapZoom, setMapZoom] = useState<number>(15);
   const [currentZoom, setCurrentZoom] = useState<number>(15);
   const [centerTrigger, setCenterTrigger] = useState<number>(0);
-  // const mapRef = useRef<L.Map | null>(null); // No se usa, se puede quitar si quieres limpiar más
+  const mapRef = useRef<L.Map | null>(null);
 
   const { isOpen, openModal, closeModal } = useModal();
   const [selectedOffers, setSelectedOffers] = useState<Offer[]>([]);
@@ -209,7 +198,6 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   const handleZoomChangeFromMap = (zoom: number) => {
     setCurrentZoom(zoom);
     setMapZoom(zoom);
-    if (onZoomChange) onZoomChange(zoom); // Propagamos el evento si existe
   };
 
   const isMaxZoom = currentZoom >= MAX_ZOOM;
@@ -274,9 +262,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         </Marker>
 
         {(() => {
-          // Agrupar ofertas (SIN ANY)
-          // Usamos Record<string, GroupedOffer> en lugar de any
-          const groupedOffers = activeOffers.reduce<Record<string, GroupedOffer>>((acc, offer) => {
+          // Agrupar ofertas por persona (usando nombre o ID único)
+          const groupedOffers = activeOffers.reduce((acc, offer) => {
             const key = `${offer.fixerName}-${offer.location.lat}-${offer.location.lng}`;
             if (!acc[key]) {
               acc[key] = {
@@ -291,10 +278,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({
               }
             }
             return acc;
-          }, {});
+          }, {} as Record<string, any>);
 
-          return Object.values(groupedOffers).map((groupedOffer) => {
+          return Object.values(groupedOffers).map((groupedOffer: any) => {
             const distance = calculateDistance(userLocation, groupedOffer.location);
+            // Usar la primera categoría para el ícono, o crear uno multi-categoría
             const primaryCategory = groupedOffer.categories[0];
             const categoryIcon = createCategoryIcon(primaryCategory);
             const emoji = getMarkerIcon(primaryCategory);
@@ -326,7 +314,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     <div className="text-sm text-gray-600 mb-2">
                       <strong>Categorías:</strong>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {groupedOffer.categories.map((cat) => (
+                        {groupedOffer.categories.map((cat: string) => (
                           <span 
                             key={cat}
                             className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs"
@@ -345,7 +333,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                       <strong>Rating:</strong> {groupedOffer.rating}/5 ⭐
                     </p>
                     <p className="text-sm mb-3">
-                      <strong>Precio desde:</strong> Bs. {Math.min(...groupedOffer.allOffers.map((o) => o.price))}
+                      <strong>Precio desde:</strong> Bs. {Math.min(...groupedOffer.allOffers.map((o: Offer) => o.price))}
                     </p>
                     
                     <button
@@ -355,16 +343,14 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                       Ver {groupedOffer.allOffers.length > 1 ? `todas las ofertas (${groupedOffer.allOffers.length})` : 'más detalles'}
                     </button>
                     
-                    {groupedOffer.whatsapp && (
-                        <a
-                        href={`https://wa.me/${groupedOffer.whatsapp.replace('+', '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 text-sm inline-block w-full text-center"
-                        >
-                        Contactar por WhatsApp
-                        </a>
-                    )}
+                    <a
+                      href={`https://wa.me/${groupedOffer.whatsapp.replace('+', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 text-sm inline-block w-full text-center"
+                    >
+                      Contactar por WhatsApp
+                    </a>
                   </div>
                 </Popup>
               </Marker>
@@ -372,10 +358,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           });
         })()}
       </MapContainer>
-      
-      {/* ... Resto de controles (Zoom, Leyenda) se mantienen igual ... */}
+
       <div className="absolute top-20 right-6 z-[1000] flex flex-col gap-3">
-        {/* ... Botones de Zoom ... */}
         <button
           onClick={handleCenterUser}
           className="bg-red-600 text-white p-3 rounded-lg shadow-xl hover:bg-red-700 transition text-sm font-semibold flex items-center gap-2"
@@ -418,6 +402,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         </button>
       </div>
 
+      {/* Leyenda actualizada con los colores reales */}
       <div className="absolute bottom-4 left-4 z-[1000] bg-gray-800 text-white p-3 rounded-lg shadow-lg max-w-[200px]">
         <h4 className="font-bold mb-2 text-sm border-b border-gray-600 pb-2">
           Categorías
